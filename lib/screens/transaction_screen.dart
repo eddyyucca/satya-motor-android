@@ -18,6 +18,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   final DatabaseHelper _db = DatabaseHelper();
   final TextEditingController _customerController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _cashController = TextEditingController();
 
   List<Item> _availableItems = [];
   List<Service> _availableServices = [];
@@ -62,6 +63,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
   double get _totalOwnerShare =>
       _cartItems.fold(0.0, (sum, item) => sum + item.ownerShare) +
       _cartServices.fold(0.0, (sum, svc) => sum + svc.ownerShare);
+
+  double get _cashAmount => double.tryParse(_cashController.text) ?? 0.0;
+  
+  double get _changeAmount {
+    double change = _cashAmount - _totalAmount;
+    return change < 0 ? 0 : change;
+  }
 
   void _addItem(Item item) {
     showDialog(
@@ -171,15 +179,68 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void _addService(Service service) {
-    setState(() {
-      _cartServices.add(TransactionService(
-        serviceId: service.id!,
-        serviceName: service.name,
-        price: service.price,
-        mechanicPercentage: service.mechanicPercentage,
-        ownerPercentage: service.ownerPercentage,
-      ));
-    });
+    final nameController = TextEditingController(text: service.name);
+    final priceController = TextEditingController(text: service.price.toStringAsFixed(0));
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Detail Jasa', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Nama Jasa',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: priceController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Harga Jasa',
+                prefixText: 'Rp ',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _cartServices.add(TransactionService(
+                  serviceId: service.id!,
+                  serviceName: nameController.text,
+                  price: double.tryParse(priceController.text) ?? 0,
+                  mechanicPercentage: service.mechanicPercentage,
+                  ownerPercentage: service.ownerPercentage,
+                ));
+              });
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Tambahkan'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveTransaction() async {
@@ -187,6 +248,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Tambahkan minimal 1 barang atau jasa'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    if (_cashAmount > 0 && _cashAmount < _totalAmount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Uang tunai kurang dari total pembayaran'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -205,6 +276,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
       totalAmount: _totalAmount,
       totalMechanicShare: _totalMechanicShare,
       totalOwnerShare: _totalOwnerShare,
+      cashAmount: _cashAmount,
+      changeAmount: _changeAmount,
       notes: _notesController.text,
     );
 
@@ -225,6 +298,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
       _cartServices = [];
       _customerController.clear();
       _notesController.clear();
+      _cashController.clear();
       _selectedMechanic = null;
     });
     _loadData(); // Refresh stock
@@ -542,6 +616,67 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       ),
                     ),
 
+                  const SizedBox(height: 16),
+                  
+                  // Uang Tunai & Kembalian
+                  if (_cartItems.isNotEmpty || _cartServices.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            controller: _cashController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'Uang Tunai (Cash)',
+                              prefixText: 'Rp ',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onChanged: (val) {
+                              setState(() {}); // Update kembalian
+                            },
+                          ),
+                          if (_cashAmount > 0) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Kembalian:',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text(
+                                  Formatters.currency(_changeAmount),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: _changeAmount > 0
+                                        ? AppColors.primary
+                                        : (_cashAmount < _totalAmount
+                                            ? AppColors.danger
+                                            : AppColors.textPrimary),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ]
+                        ],
+                      ),
+                    ),
+
                   const SizedBox(height: 20),
 
                   // Save Button
@@ -645,13 +780,15 @@ class _TransactionScreenState extends State<TransactionScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
+      builder: (context) => Material(
+        color: Colors.transparent,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(16),
@@ -716,6 +853,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -724,13 +862,15 @@ class _TransactionScreenState extends State<TransactionScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
+      builder: (context) => Material(
+        color: Colors.transparent,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(16),
@@ -791,6 +931,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -165,18 +165,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'Tentang Aplikasi',
               subtitle: 'Satya Motor v1.0.0',
               onTap: () {
-                showAboutDialog(
+                showDialog(
                   context: context,
-                  applicationName: 'Satya Motor',
-                  applicationVersion: '1.0.0',
-                  applicationLegalese: '© 2026 Satya Motor',
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(top: 16),
-                      child: Text(
-                          'Aplikasi manajemen bengkel untuk mengelola stok barang, jasa servis, transaksi, dan pembagian pendapatan.'),
+                  builder: (context) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                  ],
+                    contentPadding: const EdgeInsets.all(24),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Stylized Logo Text
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1A), // Almost black
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(4),
+                              topRight: const Radius.circular(24),
+                              bottomLeft: const Radius.circular(24),
+                              bottomRight: const Radius.circular(4),
+                            ),
+                          ),
+                          child: Column(
+                            children: const [
+                              Text(
+                                'fluxa',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1.5,
+                                  height: 1.0,
+                                ),
+                              ),
+                              Text(
+                                'tritama indonesia',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Aplikasi ini dibuat dan dikembangkan oleh\nPT Fluxa Tritama Indonesia.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: const [
+                            Icon(Icons.language, size: 20, color: AppColors.primary),
+                            SizedBox(width: 12),
+                            Text('fluxa.co.id', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: const [
+                            Icon(Icons.email_outlined, size: 20, color: AppColors.primary),
+                            SizedBox(width: 12),
+                            Text('official@fluxa.co.id', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: const [
+                            Icon(Icons.phone_outlined, size: 20, color: AppColors.primary),
+                            SizedBox(width: 12),
+                            Text('081250653005', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                        ),
+                        child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -326,24 +408,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 20),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 20),
+          title: Text(title,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          subtitle: Text(subtitle,
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          trailing:
+              const Icon(Icons.chevron_right, color: AppColors.textLight),
+          onTap: onTap,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        title: Text(title,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: Text(subtitle,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-        trailing:
-            const Icon(Icons.chevron_right, color: AppColors.textLight),
-        onTap: onTap,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

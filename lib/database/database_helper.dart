@@ -22,9 +22,19 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'satya_motor.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE items ADD COLUMN min_stock INTEGER NOT NULL DEFAULT 5');
+      await db.execute('ALTER TABLE items ADD COLUMN max_stock INTEGER NOT NULL DEFAULT 20');
+      await db.execute('ALTER TABLE transactions ADD COLUMN cash_amount REAL NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE transactions ADD COLUMN change_amount REAL NOT NULL DEFAULT 0');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -36,6 +46,8 @@ class DatabaseHelper {
         buy_price REAL NOT NULL DEFAULT 0,
         sell_price REAL NOT NULL DEFAULT 0,
         stock INTEGER NOT NULL DEFAULT 0,
+        min_stock INTEGER NOT NULL DEFAULT 5,
+        max_stock INTEGER NOT NULL DEFAULT 20,
         unit TEXT NOT NULL DEFAULT 'pcs',
         created_at TEXT NOT NULL
       )
@@ -73,6 +85,8 @@ class DatabaseHelper {
         total_amount REAL NOT NULL DEFAULT 0,
         total_mechanic_share REAL NOT NULL DEFAULT 0,
         total_owner_share REAL NOT NULL DEFAULT 0,
+        cash_amount REAL NOT NULL DEFAULT 0,
+        change_amount REAL NOT NULL DEFAULT 0,
         notes TEXT DEFAULT '',
         created_at TEXT NOT NULL,
         FOREIGN KEY (mechanic_id) REFERENCES mechanics(id)
@@ -287,6 +301,17 @@ class DatabaseHelper {
         .toList();
   }
 
+  Future<List<Item>> getRestockItems() async {
+    final db = await database;
+    return (await db.query(
+      'items',
+      where: 'stock <= min_stock',
+      orderBy: 'stock ASC',
+    ))
+        .map((e) => Item.fromMap(e))
+        .toList();
+  }
+
   Future<int> updateItem(Item item) async {
     final db = await database;
     return await db.update('items', item.toMap(),
@@ -309,7 +334,7 @@ class DatabaseHelper {
   Future<List<String>> getCategories() async {
     final db = await database;
     final result = await db.rawQuery(
-        'SELECT DISTINCT category FROM items WHERE category != "" ORDER BY category');
+        "SELECT DISTINCT category FROM items WHERE category != '' ORDER BY category");
     return result.map((e) => e['category'] as String).toList();
   }
 
@@ -453,6 +478,20 @@ class DatabaseHelper {
       limit: limit,
     ))
         .map((e) => Transaction.fromMap(e))
+        .toList();
+  }
+
+  Future<List<TransactionItem>> getTransactionItems(int transactionId) async {
+    final db = await database;
+    return (await db.query('transaction_items', where: 'transaction_id = ?', whereArgs: [transactionId]))
+        .map((e) => TransactionItem.fromMap(e))
+        .toList();
+  }
+
+  Future<List<TransactionService>> getTransactionServices(int transactionId) async {
+    final db = await database;
+    return (await db.query('transaction_services', where: 'transaction_id = ?', whereArgs: [transactionId]))
+        .map((e) => TransactionService.fromMap(e))
         .toList();
   }
 

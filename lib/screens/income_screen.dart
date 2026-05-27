@@ -64,6 +64,129 @@ class _IncomeScreenState extends State<IncomeScreen> {
     });
   }
 
+  Future<void> _showTransactionDetails(Transaction tx) async {
+    final items = await _db.getTransactionItems(tx.id!);
+    final services = await _db.getTransactionServices(tx.id!);
+    
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Detail Transaksi',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary)),
+                  const SizedBox(height: 4),
+                  Text('${tx.date} • ${tx.mechanicName ?? "Mekanik: -"}',
+                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  // Customer Info
+                  if (tx.customerName?.isNotEmpty == true) ...[
+                    Text('Pelanggan: ${tx.customerName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                  ],
+                  // Items
+                  if (items.isNotEmpty) ...[
+                    const Text('Barang', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    const SizedBox(height: 8),
+                    ...items.map((e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text('${e.itemName} (x${e.quantity})')),
+                          Text(Formatters.currency(e.sellPrice * e.quantity)),
+                        ],
+                      ),
+                    )),
+                    const Divider(),
+                  ],
+                  // Services
+                  if (services.isNotEmpty) ...[
+                    const Text('Jasa', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    const SizedBox(height: 8),
+                    ...services.map((e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(e.serviceName)),
+                          Text(Formatters.currency(e.price)),
+                        ],
+                      ),
+                    )),
+                    const Divider(),
+                  ],
+                  // Totals
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(Formatters.currency(tx.totalAmount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Tunai', style: TextStyle(fontSize: 14)),
+                      Text(Formatters.currency(tx.cashAmount), style: const TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Kembali', style: TextStyle(fontSize: 14)),
+                      Text(Formatters.currency(tx.changeAmount), style: const TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (tx.notes?.isNotEmpty == true)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+                      child: Text('Catatan: ${tx.notes}', style: const TextStyle(fontStyle: FontStyle.italic)),
+                    ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -277,10 +400,12 @@ class _IncomeScreenState extends State<IncomeScreen> {
                         itemCount: _transactions.length,
                         itemBuilder: (context, index) {
                           final tx = _transactions[index];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
+                          return GestureDetector(
+                            onTap: () => _showTransactionDetails(tx),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
@@ -357,6 +482,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
                                 ),
                               ],
                             ),
+                          ),
                           );
                         },
                       ),

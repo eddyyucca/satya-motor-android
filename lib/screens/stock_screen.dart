@@ -51,6 +51,10 @@ class _StockScreenState extends State<StockScreen> {
         TextEditingController(text: item?.sellPrice.toStringAsFixed(0) ?? '');
     final stockController =
         TextEditingController(text: item?.stock.toString() ?? '');
+    final minStockController =
+        TextEditingController(text: item?.minStock.toString() ?? '5');
+    final maxStockController =
+        TextEditingController(text: item?.maxStock.toString() ?? '20');
     final unitController = TextEditingController(text: item?.unit ?? 'pcs');
 
     showModalBottomSheet(
@@ -135,6 +139,28 @@ class _StockScreenState extends State<StockScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTextField(
+                      minStockController,
+                      'Min Stok',
+                      Icons.arrow_downward,
+                      isNumber: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTextField(
+                      maxStockController,
+                      'Max Stok',
+                      Icons.arrow_upward,
+                      isNumber: true,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -151,6 +177,8 @@ class _StockScreenState extends State<StockScreen> {
                       sellPrice:
                           double.tryParse(sellPriceController.text) ?? 0,
                       stock: int.tryParse(stockController.text) ?? 0,
+                      minStock: int.tryParse(minStockController.text) ?? 5,
+                      maxStock: int.tryParse(maxStockController.text) ?? 20,
                       unit: unitController.text.isNotEmpty
                           ? unitController.text
                           : 'pcs',
@@ -198,6 +226,7 @@ class _StockScreenState extends State<StockScreen> {
   }) {
     return TextField(
       controller: controller,
+      style: const TextStyle(color: AppColors.textPrimary),
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
@@ -250,6 +279,102 @@ class _StockScreenState extends State<StockScreen> {
     }
   }
 
+  Future<void> _showRestockList() async {
+    final restockItems = await _db.getRestockItems();
+    if (!mounted) return;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Material(
+        color: Colors.transparent,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Daftar Restock (Belanja)',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Barang yang stoknya <= minimum',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: restockItems.isEmpty
+                  ? Center(
+                      child: Text('Semua stok aman!',
+                          style: TextStyle(color: AppColors.textLight)))
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: restockItems.length,
+                      itemBuilder: (context, index) {
+                        final item = restockItems[index];
+                        final needed = item.maxStock - item.stock;
+                        return ListTile(
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.warning_amber_rounded,
+                                color: AppColors.danger, size: 20),
+                          ),
+                          title: Text(item.name,
+                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                              'Stok: ${item.stock} / Min: ${item.minStock}',
+                              style: const TextStyle(fontSize: 12)),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Beli: $needed ${item.unit}',
+                                style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -260,6 +385,13 @@ class _StockScreenState extends State<StockScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.shopping_cart_checkout),
+            tooltip: 'Daftar Restock',
+            onPressed: _showRestockList,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -323,10 +455,9 @@ class _StockScreenState extends State<StockScreen> {
                           label: Text(
                             cat,
                             style: TextStyle(
-                              color:
-                                  isSelected ? AppColors.primary : Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              color: isSelected ? Colors.white : AppColors.primary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           selected: isSelected,
@@ -334,9 +465,8 @@ class _StockScreenState extends State<StockScreen> {
                             setState(() => _selectedCategory = cat);
                             _loadData();
                           },
-                          backgroundColor:
-                              Colors.white.withValues(alpha: 0.2),
-                          selectedColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          selectedColor: AppColors.textPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),

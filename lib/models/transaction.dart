@@ -111,6 +111,8 @@ class Transaction {
   final double totalAmount;
   final double totalMechanicShare;
   final double totalOwnerShare;
+  final double cashAmount;
+  final double changeAmount;
   final String? notes;
   final String? createdAt;
   final List<TransactionItem> items;
@@ -125,6 +127,8 @@ class Transaction {
     required this.totalAmount,
     required this.totalMechanicShare,
     required this.totalOwnerShare,
+    this.cashAmount = 0,
+    this.changeAmount = 0,
     this.notes,
     this.createdAt,
     this.items = const [],
@@ -141,6 +145,8 @@ class Transaction {
       'total_amount': totalAmount,
       'total_mechanic_share': totalMechanicShare,
       'total_owner_share': totalOwnerShare,
+      'cash_amount': cashAmount,
+      'change_amount': changeAmount,
       'notes': notes ?? '',
       'created_at': createdAt ?? DateTime.now().toIso8601String(),
     };
@@ -156,6 +162,8 @@ class Transaction {
       totalAmount: (map['total_amount'] as num).toDouble(),
       totalMechanicShare: (map['total_mechanic_share'] as num).toDouble(),
       totalOwnerShare: (map['total_owner_share'] as num).toDouble(),
+      cashAmount: (map['cash_amount'] as num?)?.toDouble() ?? 0,
+      changeAmount: (map['change_amount'] as num?)?.toDouble() ?? 0,
       notes: map['notes'] as String?,
       createdAt: map['created_at'] as String?,
     );
